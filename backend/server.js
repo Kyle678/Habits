@@ -82,7 +82,7 @@ app.post("/api/streaks", (req, res) => {
       const streakId = this.lastID; // `this.lastID` gives you the ID of the newly inserted streak
 
       // Insert the log entry for the created streak
-      db.run(logQuery, [streakId, timestamp, reason || null], (err) => {
+      db.run(logQuery, [streakId, timestamp, title], (err) => {
         if (err) {
           console.error("Error logging streak creation:", err.message);
           return res.status(500).json({ error: "Error logging streak creation" });
@@ -155,30 +155,49 @@ app.post("/api/streaks/:id/delete", (req, res) => {
   const { id } = req.params;
   const { reason } = req.body;
 
+  const getTitleQuery = "SELECT title FROM streaks WHERE id = ?";
   const deleteQuery = "DELETE FROM streaks WHERE id = ?";
-  const logQuery = "INSERT INTO logs (streak_id, action, reason) VALUES (?, 'delete', ?)";
+  const logQuery = "INSERT INTO logs (streak_id, action, timestamp, reason) VALUES (?, 'delete', ?, ?)";
+
+  const timestamp = new Date().toISOString();
 
   db.serialize(() => {
-    db.run(logQuery, [id, reason || null], (err) => {
+    // Fetch the title of the streak
+    db.get(getTitleQuery, [id], (err, row) => {
       if (err) {
         console.error(err.message);
-        return res.status(500).json({ error: "Error logging deletion" });
+        return res.status(500).json({ error: "Error fetching streak title" });
       }
-    });
 
-    db.run(deleteQuery, [id], function (err) {
-      if (err) {
-        console.error(err.message);
-        return res.status(500).json({ error: "Error deleting streak" });
-      } else if (this.changes === 0) {
+      if (!row) {
         return res.status(404).json({ error: "Streak not found" });
-      } else {
-        return res.status(200).json({ message: "Streak deleted successfully" });
       }
+
+      const streakTitle = row.title;
+      const logReason = streakTitle;
+
+      // Log the deletion
+      db.run(logQuery, [id, timestamp, logReason], (err) => {
+        if (err) {
+          console.error(err.message);
+          return res.status(500).json({ error: "Error logging deletion" });
+        }
+
+        // Perform the delete operation
+        db.run(deleteQuery, [id], function (err) {
+          if (err) {
+            console.error(err.message);
+            return res.status(500).json({ error: "Error deleting streak" });
+          } else if (this.changes === 0) {
+            return res.status(404).json({ error: "Streak not found" });
+          } else {
+            return res.status(200).json({ message: "Streak deleted successfully" });
+          }
+        });
+      });
     });
   });
 });
-
 
 // Start the server
 app.listen(port, () => {
