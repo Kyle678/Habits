@@ -13,14 +13,14 @@ function App() {
   // Fetch streaks from the server
   const fetchStreaks = () => {
     setStreaks([]);
-    /*
+    
     fetch("/api/streaks")
       .then((res) => res.json())
       .then((data) => {
         setStreaks(data); // Update the state with the fetched streaks
       })
       .catch((err) => console.error("Error fetching streaks:", err));
-      */
+      
   };
 
   // Call fetchStreaks when the component mounts or whenever necessary
@@ -127,7 +127,6 @@ const handleAddStreak = () => {
   return (
     <div className="app">
       <h1>Your Streaks</h1>
-      <StreakChart />
       <div className="add-streak-form">
         <input
           type="text"
